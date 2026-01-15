@@ -3,6 +3,7 @@ export interface StudentRecord {
   id: string;
   name: string;
   email: string;
+  nationality: string;
   checkInTime: string;
   personalizedLetter?: string;
 }

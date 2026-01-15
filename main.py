@@ -4,7 +4,7 @@ import csv
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -12,6 +12,9 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+
+# Email service
+from email_service import send_welcome_email_sync
 
 # Google Generative AI
 try:
@@ -44,22 +47,27 @@ class Student(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     email = Column(String(255), nullable=False, unique=True)
+    nationality = Column(String(100), nullable=False)
     check_in_time = Column(DateTime, default=datetime.utcnow)
     letter = Column(String(2000), nullable=True)
+    email_sent = Column(Integer, default=0)
 
 
 # Pydantic schemas
 class CheckInRequest(BaseModel):
     name: str
     email: EmailStr
+    nationality: str
 
 
 class StudentResponse(BaseModel):
     id: int
     name: str
     email: str
+    nationality: str
     check_in_time: str
     letter: str | None
+    email_sent: int
 
     class Config:
         from_attributes = True
@@ -120,7 +128,11 @@ app = FastAPI(title="招生博覽會簽到系統", lifespan=lifespan)
 
 # API Routes
 @app.post("/api/checkin", response_model=StudentResponse)
-def check_in(request: CheckInRequest, db: Session = Depends(get_db)):
+def check_in(
+    request: CheckInRequest, 
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
     """Register a new student check-in."""
     # Check if email already exists
     existing = db.query(Student).filter(Student.email == request.email).first()
@@ -134,18 +146,36 @@ def check_in(request: CheckInRequest, db: Session = Depends(get_db)):
     student = Student(
         name=request.name,
         email=request.email,
-        letter=letter
+        nationality=request.nationality,
+        letter=letter,
+        email_sent=0
     )
     db.add(student)
     db.commit()
     db.refresh(student)
 
+    # Send welcome email in background
+    def send_email_task():
+        success = send_welcome_email_sync(
+            recipient_email=student.email,
+            student_name=student.name,
+            welcome_letter=letter
+        )
+        # Update email_sent status
+        if success:
+            student.email_sent = 1
+            db.commit()
+    
+    background_tasks.add_task(send_email_task)
+
     return StudentResponse(
         id=student.id,
         name=student.name,
         email=student.email,
+        nationality=student.nationality,
         check_in_time=student.check_in_time.isoformat(),
-        letter=student.letter
+        letter=student.letter,
+        email_sent=student.email_sent
     )
 
 
@@ -158,8 +188,10 @@ def get_students(db: Session = Depends(get_db)):
             id=s.id,
             name=s.name,
             email=s.email,
+            nationality=s.nationality,
             check_in_time=s.check_in_time.isoformat(),
-            letter=s.letter
+            letter=s.letter,
+            email_sent=s.email_sent
         )
         for s in students
     ]
@@ -187,10 +219,17 @@ def export_csv(db: Session = Depends(get_db)):
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "姓名", "Email", "簽到時間"])
+    writer.writerow(["ID", "姓名", "Email", "國籍", "簽到時間", "郵件已發送"])
 
     for s in students:
-        writer.writerow([s.id, s.name, s.email, s.check_in_time.isoformat()])
+        writer.writerow([
+            s.id, 
+            s.name, 
+            s.email, 
+            s.nationality,
+            s.check_in_time.isoformat(),
+            "是" if s.email_sent == 1 else "否"
+        ])
 
     output.seek(0)
     return StreamingResponse(

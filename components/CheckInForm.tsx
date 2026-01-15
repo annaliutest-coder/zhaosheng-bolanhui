@@ -8,20 +8,27 @@ interface Props {
 }
 
 const CheckInForm: React.FC<Props> = ({ onComplete }) => {
-  const [formData, setFormData] = useState({ name: '', email: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    nationality: ''
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [status, setStatus] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email) return;
+    if (!formData.name || !formData.email || !formData.nationality) return;
 
     setIsSubmitting(true);
     setStatus('正在與伺服器連線並生成專屬信件...');
 
     try {
-      // Logic now resides in the backend to ensure data is saved to PostgreSQL
-      const record = await dataService.saveStudent(formData.name, formData.email);
+      const record = await dataService.saveStudent(
+        formData.name,
+        formData.email,
+        formData.nationality
+      );
       setStatus('完成！');
       onComplete(record);
     } catch (error) {
@@ -79,12 +86,28 @@ const CheckInForm: React.FC<Props> = ({ onComplete }) => {
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-2 ml-1">國籍 / Nationality</label>
+            <div className="relative">
+              <span className="absolute left-4 top-3.5 text-slate-400">
+                <i className="fas fa-globe"></i>
+              </span>
+              <input
+                type="text"
+                required
+                placeholder="例如：台灣、中國、日本、美國..."
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none bg-slate-50 text-slate-900"
+                value={formData.nationality}
+                onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-              isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
-            }`}
+            className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+              }`}
           >
             {isSubmitting ? (
               <>
@@ -99,7 +122,7 @@ const CheckInForm: React.FC<Props> = ({ onComplete }) => {
             )}
           </button>
         </form>
-        
+
         {status && <p className="mt-4 text-center text-sm font-medium text-blue-600 animate-pulse">{status}</p>}
       </div>
 
@@ -107,7 +130,7 @@ const CheckInForm: React.FC<Props> = ({ onComplete }) => {
         {[
           { icon: 'fa-database', title: '雲端同步', desc: '資料即時傳入資料庫' },
           { icon: 'fa-robot', title: 'AI 客製化', desc: '生成專屬您的歡迎信' },
-          { icon: 'fa-bell', title: '開放提醒', desc: '2026 申請開放時將通知您' }
+          { icon: 'fa-envelope-open-text', title: 'Email 通知', desc: '歡迎信自動寄送至信箱' }
         ].map((feat, i) => (
           <div key={i} className="text-center p-4">
             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">

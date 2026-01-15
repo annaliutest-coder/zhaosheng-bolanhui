@@ -2,7 +2,7 @@
 import { StudentRecord, AnalyticsData } from '../types';
 
 // 在生產環境中，API_BASE 設為絕對路徑或根據環境調整
-const API_BASE = '/api'; 
+const API_BASE = '/api';
 
 export const dataService = {
   getStudents: async (): Promise<StudentRecord[]> => {
@@ -13,16 +13,21 @@ export const dataService = {
       id: s.id.toString(),
       name: s.name,
       email: s.email,
+      nationality: s.nationality,
       checkInTime: s.check_in_time,
       personalizedLetter: s.letter
     }));
   },
 
-  saveStudent: async (name: string, email: string): Promise<StudentRecord> => {
+  saveStudent: async (
+    name: string,
+    email: string,
+    nationality: string
+  ): Promise<StudentRecord> => {
     const response = await fetch(`${API_BASE}/checkin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email }),
+      body: JSON.stringify({ name, email, nationality }),
     });
     if (!response.ok) throw new Error('打卡失敗');
     const s = await response.json();
@@ -30,6 +35,7 @@ export const dataService = {
       id: s.id.toString(),
       name: s.name,
       email: s.email,
+      nationality: s.nationality,
       checkInTime: s.check_in_time,
       personalizedLetter: s.letter
     };

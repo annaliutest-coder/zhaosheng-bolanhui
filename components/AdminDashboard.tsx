@@ -28,9 +28,10 @@ const AdminDashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  const filteredStudents = students.filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredStudents = students.filter(s =>
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    s.nationality.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -49,7 +50,7 @@ const AdminDashboard: React.FC = () => {
           <h2 className="text-3xl font-bold text-slate-900">後端管理系統 (2026)</h2>
           <p className="text-slate-500">FastAPI + PostgreSQL 實時數據分析</p>
         </div>
-        <button 
+        <button
           onClick={dataService.exportToCSV}
           className="px-6 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 shadow-md transition-all flex items-center gap-2 active:scale-95"
         >
@@ -82,10 +83,10 @@ const AdminDashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analytics}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
+                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                <Line type="monotone" dataKey="count" stroke="#2563eb" strokeWidth={4} dot={{r: 4, fill: '#2563eb', strokeWidth: 0}} />
+                <Line type="monotone" dataKey="count" stroke="#2563eb" strokeWidth={4} dot={{ r: 4, fill: '#2563eb', strokeWidth: 0 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -94,8 +95,8 @@ const AdminDashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
           <h3 className="font-bold text-slate-800 mb-6">學生名單 (最新排序)</h3>
           <div className="mb-4">
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="搜尋姓名或 Email..."
               className="w-full px-4 py-2 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               value={searchTerm}
@@ -105,8 +106,13 @@ const AdminDashboard: React.FC = () => {
           <div className="max-h-[250px] overflow-y-auto space-y-3 pr-2 scrollbar-thin">
             {filteredStudents.map(s => (
               <div key={s.id} className="p-3 rounded-xl bg-slate-50 flex justify-between items-center border border-slate-100">
-                <div>
-                  <p className="font-bold text-slate-800 text-sm">{s.name}</p>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-bold text-slate-800 text-sm">{s.name}</p>
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                      {s.nationality}
+                    </span>
+                  </div>
                   <p className="text-slate-500 text-xs">{s.email}</p>
                 </div>
                 <p className="text-slate-400 text-[10px] font-mono">

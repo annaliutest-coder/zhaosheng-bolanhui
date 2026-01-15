@@ -2,8 +2,9 @@
 export const APP_CONFIG = {
   departmentName: "ABC Department",
   year: "2026",
-  deptWebsite: "https://abc-dept.university.edu",
-  applyUrl: "https://admissions.university.edu/apply",
+  deptWebsite: "https://www.example-university.edu/abc",
+  applyUrl: "https://www.example-university.edu/abc/apply",
+  contactEmail: "abc-admission@example-university.edu",
   adminEntryClicks: 5,
 };
 
