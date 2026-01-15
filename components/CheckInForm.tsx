@@ -125,22 +125,6 @@ const CheckInForm: React.FC<Props> = ({ onComplete }) => {
 
         {status && <p className="mt-4 text-center text-sm font-medium text-blue-600 animate-pulse">{status}</p>}
       </div>
-
-      <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-        {[
-          { icon: 'fa-database', title: '雲端同步', desc: '資料即時傳入資料庫' },
-          { icon: 'fa-robot', title: 'AI 客製化', desc: '生成專屬您的歡迎信' },
-          { icon: 'fa-envelope-open-text', title: 'Email 通知', desc: '歡迎信自動寄送至信箱' }
-        ].map((feat, i) => (
-          <div key={i} className="text-center p-4">
-            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <i className={`fas ${feat.icon} text-xl`}></i>
-            </div>
-            <h3 className="font-bold text-slate-800 mb-1">{feat.title}</h3>
-            <p className="text-slate-500 text-sm">{feat.desc}</p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
