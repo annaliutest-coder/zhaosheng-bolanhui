@@ -29,7 +29,22 @@ export const dataService = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, nationality }),
     });
-    if (!response.ok) throw new Error('打卡失敗');
+
+    if (!response.ok) {
+      // Try to extract error message from response
+      let errorMessage = '打卡失敗';
+      try {
+        const errorData = await response.json();
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        }
+      } catch (e) {
+        // If can't parse JSON, use status text
+        errorMessage = response.statusText || '打卡失敗';
+      }
+      throw new Error(errorMessage);
+    }
+
     const s = await response.json();
     return {
       id: s.id.toString(),

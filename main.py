@@ -92,10 +92,21 @@ def generate_welcome_letter(student_name: str) -> str:
     """Generate a personalized welcome letter using Gemini AI."""
     api_key = os.getenv("GEMINI_API_KEY")
 
+    # Default welcome message
+    default_message = f"親愛的 {student_name}，歡迎來到 ABC 系！我們很高興您參加了我們的招生博覽會。期待在未來的學期與您相見！"
+
     if not GENAI_AVAILABLE or not api_key:
-        return f"親愛的 {student_name}，歡迎來到 ABC 系！我們很高興您參加了我們的招生博覽會。期待在未來的學期與您相見！"
+        return default_message
 
     try:
+        from concurrent.futures import TimeoutError
+        import signal
+        
+        # Set timeout for AI generation (5 seconds)
+        def timeout_handler(signum, frame):
+            raise TimeoutError("AI generation timeout")
+        
+        # Note: signal.alarm only works on Unix, we'll use a simpler approach
         client = genai.Client(api_key=api_key)
         prompt = f"""你是一位大學系所的招生代表。請為一位名叫「{student_name}」的學生撰寫一封簡短、溫馨的歡迎信，
         歡迎他們參加招生博覽會。信件應該：
@@ -109,10 +120,18 @@ def generate_welcome_letter(student_name: str) -> str:
             model="gemini-2.0-flash",
             contents=prompt
         )
-        return response.text.strip()
+        
+        if response and response.text:
+            return response.text.strip()
+        else:
+            return default_message
+            
+    except TimeoutError:
+        print(f"AI generation timeout for {student_name}")
+        return default_message
     except Exception as e:
         print(f"AI generation error: {e}")
-        return f"親愛的 {student_name}，歡迎來到 ABC 系！我們很高興您參加了我們的招生博覽會。期待在未來的學期與您相見！"
+        return default_message
 
 
 # Lifespan for database initialization
@@ -134,37 +153,53 @@ def check_in(
     db: Session = Depends(get_db)
 ):
     """Register a new student check-in."""
-    # Check if email already exists
-    existing = db.query(Student).filter(Student.email == request.email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="此 Email 已經登記過了")
+    try:
+        # Check if email already exists
+        existing = db.query(Student).filter(Student.email == request.email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="此 Email 已經登記過了")
 
-    # Generate welcome letter
-    letter = generate_welcome_letter(request.name)
+        # Generate welcome letter
+        letter = generate_welcome_letter(request.name)
 
-    # Create student record
-    student = Student(
-        name=request.name,
-        email=request.email,
-        nationality=request.nationality,
-        letter=letter,
-        email_sent=0
-    )
-    db.add(student)
-    db.commit()
-    db.refresh(student)
+        # Create student record
+        student = Student(
+            name=request.name,
+            email=request.email,
+            nationality=request.nationality,
+            letter=letter,
+            email_sent=0
+        )
+        db.add(student)
+        db.commit()
+        db.refresh(student)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in check_in: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"系統處理中發生錯誤，請稍後再試：{str(e)[:50]}")
 
     # Send welcome email in background
     def send_email_task():
-        success = send_welcome_email_sync(
-            recipient_email=student.email,
-            student_name=student.name,
-            welcome_letter=letter
-        )
-        # Update email_sent status
-        if success:
-            student.email_sent = 1
-            db.commit()
+        # Create a new database session for background task
+        bg_db = SessionLocal()
+        try:
+            success = send_welcome_email_sync(
+                recipient_email=student.email,
+                student_name=student.name,
+                welcome_letter=letter
+            )
+            # Update email_sent status
+            if success:
+                bg_student = bg_db.query(Student).filter(Student.id == student.id).first()
+                if bg_student:
+                    bg_student.email_sent = 1
+                    bg_db.commit()
+        except Exception as e:
+            print(f"Background email task error: {e}")
+        finally:
+            bg_db.close()
     
     background_tasks.add_task(send_email_task)
 

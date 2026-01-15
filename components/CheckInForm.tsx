@@ -31,9 +31,23 @@ const CheckInForm: React.FC<Props> = ({ onComplete }) => {
       );
       setStatus('完成！');
       onComplete(record);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      setStatus('伺服器忙碌中，請稍後再試。');
+      // Try to get the error message from the backend
+      let errorMessage = '伺服器忙碌中，請稍後再試。';
+
+      if (error && error.message) {
+        if (error.message.includes('已經登記')) {
+          errorMessage = '此 Email 已經登記過了，請使用其他 Email。';
+        } else if (error.message.includes('處理中發生錯誤')) {
+          errorMessage = error.message;
+        }
+      }
+
+      setStatus(errorMessage);
+
+      // Clear error after 5 seconds
+      setTimeout(() => setStatus(''), 5000);
     } finally {
       setIsSubmitting(false);
     }
